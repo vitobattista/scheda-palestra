@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scheda Palestra</title>
+<meta name="description" content="La scheda del PT, leggibile e compilabile in palestra.">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="color-scheme" content="dark light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Scheda">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+/* Layout: iOS inset-grouped cards on true black. iPhone 17 = 402 pt wide → 16 pt margins, 370 pt content.
+   Type = iOS Dynamic Type (Large). Spacing on a 4 pt grid. Every control has a 44 pt hit area.
+   Radii are concentric: card 28 − padding 16 = inner 12. */
+:root{
+  /* color */
+  --bg:#000000;
+  --surface:#1c1c1e;
+  --surface-2:#2c2c2e;
+  --fill:rgba(120,120,128,.36);
+  --sep:rgba(84,84,88,.65);
+  --fg:#ffffff;
+  --fg-2:rgba(235,235,245,.6);
+  --fg-3:rgba(235,235,245,.3);
+  --accent:#ff6a00;
+  --accent-ink:#000000;
+  --accent-soft:rgba(255,106,0,.18);
+  --accent-text:#ff7a1a;
+  --bar:rgba(0,0,0,.78);
+  --thumb:#000000;
+  --shadow:rgba(0,0,0,.5);
+  --shimmer:rgba(255,255,255,.05);
+  /* type: SF via system-ui. Safari applies SF's optical tracking itself, so no manual letter-spacing on mixed-case text */
+  --font:-apple-system,BlinkMacSystemFont,system-ui,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-num:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  /* spacing + shape */
+  --m:16px;
+  --hit:44px;
+  --r-card:28px;
+  --r-inner:12px;
+  color-scheme:dark;
+}
+/* light: iOS grouped palette — #F2F2F7 ground, white cards, #F2F2F7 fields; orange text darkened for contrast on white */
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f2f2f7;
+    --surface:#ffffff;
+    --surface-2:#f2f2f7;
+    --fill:rgba(120,120,128,.16);
+    --sep:rgba(60,60,67,.29);
+    --fg:#000000;
+    --fg-2:rgba(60,60,67,.6);
+    --fg-3:rgba(60,60,67,.3);
+    --accent:#ff6a00;
+    --accent-ink:#000000;
+    --accent-soft:rgba(255,106,0,.14);
+    --accent-text:#d45500;
+    --bar:rgba(242,242,247,.82);
+    --thumb:#ffffff;
+    --shadow:rgba(0,0,0,.12);
+    --shimmer:rgba(0,0,0,.04);
+    color-scheme:light;
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;background:var(--bg)}
+html,body{margin:0;background:var(--bg);color:var(--fg)}
+img{max-width:100%}
+[hidden]{display:none!important}
+/* status bar band: content scrolls under it, never behind the clock */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+body{font-family:var(--font);font-size:17px;line-height:22px;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;padding-bottom:env(safe-area-inset-bottom,0px)}
+button,input{font:inherit;color:inherit}
+button{background:none;border:0;padding:0;cursor:pointer;touch-action:manipulation}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}
+.inner{max-width:560px;margin:0 auto;padding-left:max(var(--m),env(safe-area-inset-left,0px));padding-right:max(var(--m),env(safe-area-inset-right,0px))}
+
+/* ── header: Large Title 34/41 + subhead, round action ── */
+.top .inner{padding-block:calc(12px + env(safe-area-inset-top,0px)) 12px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.top .titles{display:grid;gap:4px;min-width:0}
+h1{margin:0;font-size:34px;line-height:41px;font-weight:700}
+.sub{margin:0;font-size:15px;line-height:20px;color:var(--fg-2)}
+/* scheda picker: a native iOS picker under a text button (44 pt hit area) */
+.picker{position:relative;justify-self:start;display:inline-flex;align-items:center;gap:4px;min-height:var(--hit);margin-block:-10px -8px;font-size:15px;line-height:20px;font-weight:600;color:var(--accent-text)}
+.picker svg{width:12px;height:12px;flex:none}
+.picker select{position:absolute;inset:0;width:100%;opacity:0;font-size:16px;-webkit-appearance:none;appearance:none;cursor:pointer}
+.picker.archive{color:var(--fg-2)}
+.field input:disabled{opacity:1;-webkit-text-fill-color:currentColor;color:var(--fg-2)}
+.rpe button:disabled{cursor:default}
+.round{flex:none;width:var(--hit);height:var(--hit);border-radius:50%;background:var(--surface);color:var(--accent-text);display:grid;place-items:center}
+.round svg{width:22px;height:22px}
+.round.spin svg{animation:spin .9s linear infinite}
+.round{position:relative}
+.round.pending::after{content:"";position:absolute;top:6px;right:6px;width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--bg)}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── sticky bar: weeks, then day ── */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(24px);backdrop-filter:saturate(180%) blur(24px);border-bottom:.5px solid var(--sep)}
+.bar .inner{padding-block:4px 12px;display:grid;gap:12px}
+.weeks{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-inline:calc(-1 * var(--m));padding-inline:var(--m);scroll-padding-inline:var(--m)}
+.weeks::-webkit-scrollbar{display:none}
+.wk{flex:1 0 46px;position:relative;height:var(--hit);border-radius:22px;background:var(--surface);color:var(--fg-2);font-size:17px;line-height:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.wk.current{color:var(--accent-text);box-shadow:inset 0 0 0 2px var(--accent)}
+.wk[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);box-shadow:none}
+.wk:disabled{opacity:.3;cursor:default}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;height:var(--hit);padding:3px;gap:3px;border-radius:var(--r-inner);background:var(--fill)}
+.seg button{border-radius:calc(var(--r-inner) - 3px);font-size:17px;line-height:22px;font-weight:600;color:var(--fg-2)}
+.seg button[aria-pressed="true"]{background:var(--thumb);color:var(--accent-text);box-shadow:0 2px 6px var(--shadow)}
+
+/* ── list ── */
+main .inner{padding-block:16px 32px;display:grid;gap:16px}
+.status{font-size:13px;line-height:18px;color:var(--fg-2);text-align:center}
+
+/* card: 16 padding, radius 28 → inner 12 */
+.ex{background:var(--surface);border-radius:var(--r-card);padding:16px;display:grid;gap:16px}
+.ex-head{display:grid;grid-template-columns:32px minmax(0,1fr);gap:12px;align-items:center}
+.ex-n{width:32px;height:32px;border-radius:50%;background:var(--surface-2);display:grid;place-items:center;font-family:var(--font-num);font-size:15px;line-height:20px;font-weight:700;color:var(--accent-text);font-variant-numeric:tabular-nums}
+.ex h3{margin:0;font-size:20px;line-height:25px;font-weight:600;overflow-wrap:anywhere}
+.ex.filled .ex-n{background:var(--accent);color:var(--accent-ink)}
+.lbl{display:block;font-size:12px;line-height:16px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--fg-2)}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tiles.wide{grid-template-columns:minmax(0,1fr)}
+.tiles.wide.with-load{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}
+.tile{background:var(--surface-2);border-radius:var(--r-inner);padding:12px;display:grid;gap:2px;min-width:0}
+.tile b{font-family:var(--font-num);font-size:20px;line-height:25px;font-weight:600;overflow-wrap:anywhere}
+.tile.text b{font-family:var(--font);font-size:17px;line-height:22px}
+.prev,.note{margin:-4px 0 0;font-size:13px;line-height:18px;color:var(--fg-2)}
+.prev b{font-weight:600;color:var(--fg)}
+.note{display:flex;gap:8px}
+.note::before{content:"";flex:none;width:3px;border-radius:2px;background:var(--accent)}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.field{display:grid;gap:8px;min-width:0}
+.field input{display:block;width:100%;min-width:0;height:52px;padding:0 16px;border:0;border-radius:var(--r-inner);background:var(--surface-2);color:var(--fg);font-family:var(--font-num);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;-webkit-appearance:none;appearance:none}
+.field input::placeholder{color:var(--fg-3);font-weight:400}
+.field input:focus{outline:2px solid var(--accent-text);outline-offset:0}
+/* RPE: one row — label left, slim segmented control right (32 pt visible, 44 pt hit area) */
+.rpe-row{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:var(--hit)}
+.rpe{flex:0 1 232px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));height:32px;padding:2px;gap:2px;border-radius:16px;background:var(--surface-2)}
+.rpe button{position:relative;border-radius:14px;color:var(--fg-2);font-family:var(--font-num);font-size:15px;line-height:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.rpe button::after{content:"";position:absolute;inset:-8px 0}
+.rpe button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+
+/* summary */
+.summary{margin-top:8px;background:var(--surface);border-radius:var(--r-card);padding:16px;display:grid;gap:12px}
+.summary-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.summary h2{margin:0;font-size:17px;line-height:22px;font-weight:600}
+.summary .copy,.banner .cta{position:relative;height:36px;padding:0 16px;border-radius:18px;background:var(--accent);color:var(--accent-ink);font-size:15px;line-height:20px;font-weight:600}
+.summary .copy::after,.banner .cta::after{content:"";position:absolute;inset:-4px}
+.summary ul{margin:0;padding:0;list-style:none;display:grid;gap:8px;font-size:15px;line-height:20px;color:var(--fg-2);-webkit-user-select:text;user-select:text}
+.summary li b{font-weight:600;color:var(--fg)}
+
+/* states */
+.banner{background:var(--surface);border-radius:var(--r-card);padding:16px;display:grid;gap:8px}
+.banner h2{margin:0;font-size:17px;line-height:22px;font-weight:600}
+.banner p{margin:0;font-size:15px;line-height:20px;color:var(--fg-2)}
+.banner.warn h2{color:var(--accent-text)}
+.banner .cta{justify-self:start;margin-top:4px}
+.gate{background:var(--surface);border-radius:var(--r-card);padding:16px;display:grid;gap:12px}
+.gate h2{margin:0;font-size:20px;line-height:25px;font-weight:600}
+.gate p{margin:0;font-size:15px;line-height:20px;color:var(--fg-2)}
+.gate p.err{color:var(--accent-text)}
+.gate input{display:block;width:100%;height:52px;padding:0 16px;border:0;border-radius:var(--r-inner);background:var(--surface-2);color:var(--fg);font-family:var(--font-num);font-size:20px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;-webkit-appearance:none;appearance:none}
+.gate input::placeholder{letter-spacing:0;text-transform:none;font-weight:400;color:var(--fg-3)}
+.gate input:focus{outline:2px solid var(--accent-text);outline-offset:0}
+.gate button{height:var(--hit);border-radius:22px;background:var(--accent);color:var(--accent-ink);font-size:17px;line-height:22px;font-weight:600}
+.gate button:disabled{opacity:.5}
+.foot-btn{min-height:var(--hit);color:var(--fg-2);font-size:13px;line-height:18px;text-decoration:underline;text-underline-offset:2px}
+.skel{height:176px;border-radius:var(--r-card);background:var(--surface);position:relative;overflow:hidden}
+.skel::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,var(--shimmer),transparent);animation:sh 1.4s infinite}
+@keyframes sh{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+footer .inner{padding-block:0 24px;display:grid;justify-items:center;text-align:center;font-size:13px;line-height:18px;color:var(--fg-3)}
+footer a{min-height:var(--hit);display:inline-flex;align-items:center;color:var(--fg-2)}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20;max-width:calc(100% - 32px);padding:12px 20px;border-radius:22px;background:var(--surface-2);color:var(--fg);font-size:15px;line-height:20px;box-shadow:0 8px 24px var(--shadow)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="inner">
+    <div class="titles">
+      <label class="picker" id="picker" hidden>
+        <span id="pickLabel"></span>
+        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>
+        <select id="pickSel" aria-label="Scheda"></select>
+      </label>
+      <h1 id="title">Scheda</h1>
+      <p class="sub" id="sub">Carico la scheda…</p>
+    </div>
+    <button class="round" id="refresh" type="button" aria-label="Sincronizza" title="Sincronizza">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.6M20 4v4.6h-4.6M20 12a8 8 0 0 1-13.7 5.6L4 15.4M4 20v-4.6h4.6"/></svg>
+    </button>
+  </div>
+</header>
+
+<nav class="bar" id="bar" hidden>
+  <div class="inner">
+    <div class="weeks" id="weeks" role="group" aria-label="Settimana"></div>
+    <div class="seg" id="days" role="group" aria-label="Giorno"></div>
+  </div>
+</nav>
+
+<main>
+  <div class="inner" id="main">
+    <div class="status"><span>Carico la scheda dal tuo Google Drive…</span></div>
+    <div class="skel"></div><div class="skel"></div><div class="skel"></div>
+  </div>
+</main>
+
+<footer>
+  <div class="inner">
+    <span>Reps, kg e RPE si salvano sul telefono e si sincronizzano online. Nel file Excel vanno riportati a mano.</span>
+    <button type="button" class="foot-btn" id="logout">Cambia codice di accesso</button>
+  </div>
+</footer>
+
+<script src="config.js"></script>
+<script>
+(function(){
+const LS = { token: 'scheda:token:v1', schede: 'scheda:schede:v3', ui: 'scheda:ui:v3', log: 'scheda:log:v3', sync: 'scheda:sync:v3', sheet: 'scheda:sheet:v3:' };
+
+const store = {
+  get(k){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e){ return null; } },
+  set(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} },
+  del(k){ try { localStorage.removeItem(k); } catch(e){} }
+};
+
+/* Everything lives on the phone; the bridge is only for sync.
+   schede  [{key,nome,dal}] newest first      sheet:<key> {version, model}  (compact: empty fields omitted)
+   ui      {key, pos:{[key]:{day,week}}, t}    log {"m2-1:6:0": {r,k,e,t}}  (t = when it was last changed)
+   sync    {at, dirty:[log keys], dirtyUi}                                                       */
+let schede = store.get(LS.schede);
+const ui = migrateUi(store.get(LS.ui));
+let log = store.get(LS.log) || {};
+const syncInfo = Object.assign({ at: 0, dirty: [], dirtyUi: false }, store.get(LS.sync) || {});
+let model = null, errorState = null, syncing = false, syncAgain = null, offline = false;
+
+function migrateUi(u){
+  u = Object.assign({ key: null, pos: {}, t: 0 }, u || {});
+  if (!u.pos || typeof u.pos !== 'object') u.pos = {};
+  // before the archive existed, day/week belonged to the first scheda (key m1)
+  if ((u.day != null || u.week != null) && !u.pos.m1) u.pos.m1 = { day: u.day ?? null, week: normWeek(u.week, u.day) };
+  delete u.day; delete u.week;
+  return u;
+}
+function normWeek(w, d){
+  if (typeof w === 'number') return w;
+  if (w && typeof w === 'object') { const v = w[d] ?? Object.values(w).sort((a,b) => b - a)[0]; return typeof v === 'number' ? v : null; }
+  return null;
+}
+const currentKey = () => schede && schede.length ? schede[0].key : null;
+const activeKey = () => ui.key || currentKey();
+const isArchive = () => !!(ui.key && currentKey() && ui.key !== currentKey());
+const pos = () => { const k = activeKey() || '_'; return ui.pos[k] || (ui.pos[k] = { day: null, week: null }); };
+
+const FIELDS = ['serie','reps','carico','repsEs','caricoEs','rpe','note'];
+function expand(m){
+  return { meta: m.meta || {}, weeks: m.weeks, days: m.days.map(d => ({ n: d.n, ex: d.ex.map(e => ({ name: e.name,
+    w: e.w.map(o => { const x = {}; FIELDS.forEach(f => { x[f] = (o && o[f]) || ''; }); return x; }) })) })) };
+}
+const cachedSheet = k => k ? store.get(LS.sheet + k) : null;
+function loadModel(){ const c = cachedSheet(activeKey()); model = c && c.model ? expand(c.model) : null; }
+
+/* ---------- local saving: instant, no network ---------- */
+function saveLocal(){ store.set(LS.ui, ui); store.set(LS.log, log); store.set(LS.sync, syncInfo); }
+function touchUi(){ ui.t = Date.now(); syncInfo.dirtyUi = true; saveLocal(); }
+function setLog(k, f, v){
+  const next = Object.assign({}, log[k]);
+  if (v) next[f] = v; else delete next[f];
+  next.t = Date.now();                       // an entry with only t records that the values were cleared
+  log[k] = next;
+  if (!syncInfo.dirty.includes(k)) syncInfo.dirty.push(k);
+  saveLocal();
+  paintSync();
+  paintCount();
+}
+
+/* ---------- the bridge: one call reads and writes everything ---------- */
+const API = String((window.SCHEDA_CONFIG && window.SCHEDA_CONFIG.apiUrl) || '').trim();
+const apiReady = /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(API);
+let token = store.get(LS.token) || '';
+const SYNC_EVERY = 5 * 60 * 1000;           // on open/return, sync only if the last one is older than this
+
+function apiError(code, message){ const e = new Error(message); e.code = code; return e; }
+async function callBridge(body){
+  // a call never waits forever: on iPhone a request started while the app goes to background can stay suspended
+  const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = setTimeout(() => { if (ctrl) ctrl.abort(); }, 25000);
+  let res, data;
+  try {
+    // text/plain = no CORS preflight, which Apps Script cannot answer
+    res = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), signal: ctrl ? ctrl.signal : undefined });
+  } catch (e) { clearTimeout(timer); throw apiError('network', 'Nessuna connessione.'); }
+  try { data = await res.json(); } catch (e) { clearTimeout(timer); throw apiError(ctrl && ctrl.signal.aborted ? 'network' : 'server', 'Il ponte non ha risposto in JSON: controlla che il deployment sia "App web" con accesso "Chiunque".'); }
+  clearTimeout(timer);
+  if (!data || !data.ok) throw apiError((data && data.code) || 'server', (data && data.error) || 'Errore del ponte.');
+  return data.result;
+}
+
+/* Going to background: send pending changes and don't wait. iPhone may suspend the app before the answer
+   arrives, so this never blocks anything; changes stay marked until a normal sync confirms them
+   (sending them twice is harmless: each entry carries its own time). */
+function sendInBackground(){
+  if (!apiReady || !token || navigator.onLine === false) return;
+  if (!syncInfo.dirty.length && !syncInfo.dirtyUi) return;
+  const sentLog = {};
+  syncInfo.dirty.forEach(k => { if (log[k]) sentLog[k] = log[k]; });
+  try {
+    fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, keepalive: true,
+      body: JSON.stringify({ action: 'sync', token: token, have: null, want: [], changes: { log: sentLog, ui: syncInfo.dirtyUi ? ui : null }, light: true }) }).catch(() => {});
+  } catch (e) {}
+}
+
+async function sync(opts){
+  opts = opts || {};
+  if (!apiReady || !token) return;
+  if (navigator.onLine === false) { offline = true; paintSync(); return; }
+  if (syncing) { syncAgain = Object.assign({}, syncAgain || {}, opts); return; }
+  syncing = true; paintSync();
+
+  const sentLog = {};
+  syncInfo.dirty.forEach(k => { if (log[k]) sentLog[k] = log[k]; });
+  const sentUi = syncInfo.dirtyUi ? JSON.parse(JSON.stringify(ui)) : null;
+  const have = {};
+  (schede || []).forEach(x => { const c = cachedSheet(x.key); if (c) have[x.key] = c.version; });
+  const want = [];
+  if (opts.want) want.push(opts.want);
+  if (ui.key && !cachedSheet(ui.key)) want.push(ui.key);
+
+  try {
+    const r = await callBridge({ action: 'sync', token: token, have: have, want: want, changes: { log: sentLog, ui: sentUi } });
+    offline = false;
+
+    // schede list + changed sheets
+    if (Array.isArray(r.schede) && r.schede.length) {
+      schede = r.schede; store.set(LS.schede, schede);
+      if (ui.key && !schede.some(x => x.key === ui.key)) ui.key = null;
+    }
+    Object.keys(r.sheets || {}).forEach(k => store.set(LS.sheet + k, r.sheets[k]));
+
+    // history: the server sent the merged state; keep local entries changed while the call was in flight
+    const srv = (r.state && r.state.log) || {};
+    Object.keys(srv).forEach(k => { const mine = log[k]; if (!mine || (srv[k].t || 0) >= (mine.t || 0)) log[k] = srv[k]; });
+    syncInfo.dirty = syncInfo.dirty.filter(k => !(sentLog[k] && log[k] && log[k].t === sentLog[k].t));
+    const su = r.state && r.state.ui;
+    if (sentUi && ui.t === sentUi.t) syncInfo.dirtyUi = false;
+    // day/week per scheda: the most recent wins (a new device adopts them). Which scheda is open stays local:
+    // a phone always opens the scheda in use unless you choose an archived one on that phone.
+    if (su && !syncInfo.dirtyUi && (su.t || 0) >= (ui.t || 0)) { const m = migrateUi(su); ui.pos = m.pos; ui.t = m.t || 0; }
+
+    syncInfo.at = Date.now();
+    saveLocal();
+
+    const err = r.errors && r.errors[activeKey()];
+    loadModel();
+    errorState = (!model && err) ? { warn:true, title:'Non riesco a leggere la scheda', text: err, action: { label:'Riprova', run: () => sync({ want: activeKey() }) } } : null;
+  } catch (e) {
+    if (e.code === 'auth' || e.code === 'setup') { syncing = false; signOut(e.message); return; }
+    offline = e.code === 'network';
+    if (!model) errorState = { warn:true, title: offline ? 'Serve una connessione' : 'Il ponte non risponde',
+      text: offline ? 'La prima volta la scheda va scaricata. Poi l\'app funziona anche senza campo.' : e.message,
+      action: { label:'Riprova', run: () => sync({ want: activeKey() }) } };
+  }
+  syncing = false;
+  render();
+  paintSync();          // also when render() waits for the keyboard to close
+  if (syncAgain) { const o = syncAgain; syncAgain = null; sync(o); return; }
+  // the position adopted from another device may point to a scheda not downloaded yet
+  if (!model && !errorState && activeKey() && !opts.retry) sync({ want: activeKey(), retry: true });
+}
+
+/* ---------- helpers ---------- */
+function h(tag, attrs, ...kids){
+  const el = document.createElement(tag);
+  for (const k in (attrs||{})) {
+    const v = attrs[k];
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  kids.flat().forEach(c => { if (c == null || c === false) return; el.append(c.nodeType ? c : document.createTextNode(String(c))); });
+  return el;
+}
+const svgCheck = () => { const s = document.createElementNS('http://www.w3.org/2000/svg','svg'); s.setAttribute('viewBox','0 0 24 24'); s.setAttribute('aria-hidden','true'); s.innerHTML = '<path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'; return s; };
+const svgRefresh = () => { const s = document.createElementNS('http://www.w3.org/2000/svg','svg'); s.setAttribute('viewBox','0 0 24 24'); s.setAttribute('aria-hidden','true'); s.innerHTML = '<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'; return s; };
+
+const dec = s => /^-?\d+\.\d+$/.test(s) ? s.replace('.', ',') : s;
+function fmtLoad(s){
+  s = (s || '').trim(); if (!s) return '';
+  s = dec(s);
+  if (/^[\d.,/ ]+$/.test(s)) return s.replace(/\s+/g,'') + ' kg';
+  return s.replace(/(\d)\s*kg\b/gi, '$1 kg').replace(/(\d)\s*rm\b/gi, '$1 RM');
+}
+function fmtText(s){
+  return (s || '').replace(/(\d)\s*x\s*/gi, '$1 × ').replace(/(\d)\s*rm\b/gi, '$1 RM').replace(/\brt\b/gi, 'reps').replace(/\s+/g, ' ').trim();
+}
+const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+const isNum = s => /^\d+$/.test((s||'').trim());
+
+/* ---------- week logic ---------- */
+const hasRx  = (day,i) => day.ex.some(e => { const x = e.w[i]||{}; return x.serie || x.reps || x.carico; });
+const hasLog = (day,i) => day.ex.some(e => { const x = e.w[i]||{}; return x.repsEs || x.caricoEs || x.rpe; });
+function nextWeek(day){
+  for (let i = 0; i < model.weeks.length; i++) if (hasRx(day,i) && !hasLog(day,i)) return i;
+  for (let i = model.weeks.length - 1; i >= 0; i--) if (hasRx(day,i)) return i;
+  return 0;
+}
+/* current week = the earliest week that one of the days still has to fill in the file */
+const currentWeek = () => Math.min(...model.days.map(nextWeek));
+
+/* ---------- render ---------- */
+let deferred = false;
+const typing = () => { const a = document.activeElement; return !!(a && a.tagName === 'INPUT' && document.getElementById('main').contains(a)); };
+document.addEventListener('focusout', () => setTimeout(() => { if (deferred && !typing()) render(); }, 0));
+
+function render(force){
+  if (!force && typing()) { deferred = true; return; }   // background updates never redraw under the keyboard
+  deferred = false;
+  const main = document.getElementById('main');
+  const rbtn = document.getElementById('refresh');
+  rbtn.classList.toggle('spin', !!syncing);
+  rbtn.classList.toggle('pending', syncInfo.dirty.length > 0 && !syncing);
+  main.replaceChildren();
+
+  rbtn.hidden = !apiReady || !token;
+  if (!apiReady || !token) {
+    document.getElementById('bar').hidden = true;
+    document.getElementById('picker').hidden = true;
+    document.getElementById('title').textContent = 'Scheda';
+    document.getElementById('sub').textContent = apiReady ? 'Accesso' : 'Configurazione';
+    main.append(gate());
+    return;
+  }
+
+  countState = null;
+  if (!model) {
+    document.getElementById('bar').hidden = true;
+    document.getElementById('title').textContent = 'Scheda';
+    document.getElementById('picker').hidden = true;
+    document.getElementById('sub').textContent = errorState ? '' : 'Scarico la scheda…';
+    if (errorState) main.append(banner(errorState));
+    else main.append(h('div',{class:'skel'}), h('div',{class:'skel'}));
+    return;
+  }
+
+  const P = pos();
+  if (!model.days.some(d => d.n === P.day)) P.day = model.days[0].n;
+  const day = model.days.find(d => d.n === P.day);
+  const nw = isArchive() ? -1 : currentWeek();
+  let wi = model.weeks.indexOf(P.week);
+  if (wi < 0 && isArchive()) wi = model.weeks.length - 1;
+  if (wi < 0) wi = nw;
+  if (!hasRx(day, wi)) { wi = nextWeek(day); }
+
+  const mk = (activeKey() || ('m' + String(model.meta.mesocycle || '0').replace(/[^A-Za-z0-9]/g, ''))) + '-' + day.n;
+  const key = (i) => mk + ':' + model.weeks[wi] + ':' + i;
+  const pkey = (i) => wi > 0 ? mk + ':' + model.weeks[wi-1] + ':' + i : null;
+  const filledApp = L => !!(L && (L.r || L.k || L.e));
+  const filledFile = y => !!(y && (y.repsEs || y.caricoEs || y.rpe));
+
+  // header
+  document.getElementById('title').textContent = 'Settimana ' + model.weeks[wi];
+  countState = () => ['Giorno ' + day.n, day.ex.filter((e,i) => filledApp(log[key(i)]) || filledFile(e.w[wi])).length + ' su ' + day.ex.length + ' esercizi compilati'].join(' · ');
+  document.getElementById('sub').textContent = countState();
+
+  // weeks
+  const weeks = document.getElementById('weeks');
+  weeks.replaceChildren(...model.weeks.map((n,i) => h('button', { type:'button', class: 'wk' + (i === nw ? ' current' : ''),
+    'aria-pressed': String(i === wi), disabled: !hasRx(day,i), 'aria-label': 'Settimana ' + n + (i === nw ? ', settimana corrente' : ''),
+    onclick: () => select(() => { pos().week = n; }) }, 'W' + n)));
+
+  // days
+  const days = document.getElementById('days');
+  days.replaceChildren(...model.days.map(d => h('button', { type:'button', 'aria-pressed': String(d.n === day.n),
+    onclick: () => select(() => { pos().day = d.n; }) }, 'Giorno ' + d.n)));
+  document.getElementById('bar').hidden = false;
+  requestAnimationFrame(() => { const sel = weeks.querySelector('[aria-pressed="true"]'); if (sel) weeks.scrollLeft = Math.max(0, sel.offsetLeft - (weeks.clientWidth - sel.offsetWidth) / 2); });
+
+  paintPicker();
+  if (isArchive()) main.append(banner({ title: 'Scheda in archivio', text: 'Sola lettura: vedi la prescrizione del PT e i valori che avevi segnato.', action: { label: 'Torna alla scheda in uso', run: () => switchScheda(currentKey()) } }));
+  if (errorState) main.append(banner(errorState));
+
+  day.ex.forEach((e,i) => main.append(card(e, i, wi, key(i), pkey(i))));
+
+  // what to copy into the Excel file at home
+  const lines = day.ex.map((e,i) => {
+    const L = log[key(i)]; if (!filledApp(L)) return null;
+    const parts = [L.r && (L.r + ' reps'), L.k && (L.k + ' kg'), L.e && ('RPE ' + L.e)].filter(Boolean);
+    return { name: cap(e.name), val: parts.join(' · ') };
+  }).filter(Boolean);
+  if (lines.length) {
+    const text = 'Giorno ' + day.n + ' · Week ' + model.weeks[wi] + '\n' + lines.map(l => l.name + ': ' + l.val).join('\n');
+    main.append(h('section', { class:'summary' },
+      h('div', { class:'summary-head' }, h('h2', null, 'Da riportare nel file'), h('button', { type:'button', class:'copy', onclick: () => copy(text) }, 'Copia')),
+      h('ul', null, lines.map(l => h('li', null, h('b', null, l.name), ' · ' + l.val)))));
+  }
+  main.append(h('p', { class:'status', id:'syncline' }, syncText()));
+}
+
+let countState = null;   // set by render(): how to recount the visible day
+function paintCount(){ if (countState) document.getElementById('sub').textContent = countState(); }
+
+function syncText(){
+  const n = syncInfo.dirty.length;
+  const parts = [];
+  if (syncing) parts.push('Sincronizzo…');
+  else if (offline) parts.push('Offline');
+  else if (syncInfo.at) parts.push('Sincronizzato ' + when(syncInfo.at));
+  if (n && !syncing) parts.push(n === 1 ? '1 modifica da sincronizzare' : n + ' modifiche da sincronizzare');
+  return parts.join(' · ');
+}
+function paintSync(){
+  const el = document.getElementById('syncline'); if (el) el.textContent = syncText();
+  const b = document.getElementById('refresh');
+  b.classList.toggle('spin', !!syncing);
+  b.classList.toggle('pending', syncInfo.dirty.length > 0 && !syncing);
+}
+
+function select(change){
+  const a = document.activeElement; if (a && a.blur) a.blur();
+  change(); touchUi(); render(true);
+  window.scrollTo(0, 0);
+}
+
+let gateMsg = '';
+function gate(){
+  if (!apiReady) {
+    return h('div', { class:'gate' }, h('h2', null, 'Manca il collegamento'),
+      h('p', null, 'Apri config.js nel repository e incolla l\'URL /exec del ponte Apps Script, poi ricarica la pagina.'));
+  }
+  const inp = h('input', { id:'gate-code', type:'text', inputmode:'text', autocomplete:'one-time-code', autocapitalize:'characters', autocorrect:'off', spellcheck:'false', enterkeyhint:'go', placeholder:'Codice di accesso', 'aria-label':'Codice di accesso' });
+  const btn = h('button', { type:'submit' }, 'Entra');
+  const form = h('form', { class:'gate' },
+    h('h2', null, 'Codice di accesso'),
+    h('p', null, 'È il codice che hai generato con impostaCodice() in Apps Script. Si inserisce una volta per dispositivo.'),
+    gateMsg ? h('p', { class:'err' }, gateMsg) : null,
+    inp, btn);
+  form.addEventListener('submit', ev => {
+    ev.preventDefault();
+    const v = inp.value.replace(/\s+/g, '').toUpperCase();
+    if (!v) { inp.focus(); return; }
+    inp.blur();
+    token = v; store.set(LS.token, token); gateMsg = '';
+    errorState = null; render(true);
+    sync({ want: activeKey() });
+  });
+  return form;
+}
+function signOut(msg){
+  token = ''; gateMsg = msg || '';
+  store.del(LS.token);
+  render(true);
+}
+document.getElementById('logout').addEventListener('click', () => signOut(''));
+
+function paintPicker(){
+  const box = document.getElementById('picker');
+  if (!schede || schede.length < 2) { box.hidden = true; return; }
+  const k = activeKey(), cur = schede.find(x => x.key === k) || schede[0];
+  const short = d => (d || '').split('/').slice(0, 2).join('/');
+  document.getElementById('pickLabel').textContent = isArchive() ? 'Archivio · ' + cur.nome : cur.nome + (cur.dal ? ' · dal ' + short(cur.dal) : '');
+  box.classList.toggle('archive', isArchive());
+  const sel = document.getElementById('pickSel');
+  sel.replaceChildren(...schede.map((x, i) => h('option', { value: x.key }, x.nome + (x.dal ? ' (dal ' + x.dal + ')' : '') + (i === 0 ? ' · in uso' : ' · archivio'))));
+  sel.value = cur.key;
+  box.hidden = false;
+}
+document.getElementById('pickSel').addEventListener('change', ev => switchScheda(ev.target.value));
+
+function switchScheda(key){
+  if (!key || key === activeKey()) { paintPicker(); return; }
+  const a = document.activeElement; if (a && a.blur) a.blur();
+  ui.key = key === currentKey() ? null : key;
+  touchUi();
+  loadModel();
+  errorState = null;
+  render(true); window.scrollTo(0, 0);
+  if (!model) sync({ want: key });
+}
+
+function copy(text){
+  const fallback = () => {
+    const ul = document.querySelector('.summary ul');
+    if (ul) { const r = document.createRange(); r.selectNodeContents(ul); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r); }
+    toast('Testo selezionato: usa Copia dal menu.');
+  };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => toast('Copiato'), fallback);
+    else fallback();
+  } catch (e) { fallback(); }
+}
+
+function card(e, i, wi, k, pk){
+  const x = e.w[wi] || {};
+  const cur = log[k] || {};
+  const anyCur = !!(cur.r || cur.k || cur.e || x.repsEs || x.caricoEs || x.rpe);
+  const el = h('article', { class: 'ex' + (anyCur ? ' filled' : '') });
+  const refreshFilled = () => { const L = log[k] || {}; el.classList.toggle('filled', !!(L.r || L.k || L.e || x.repsEs || x.caricoEs || x.rpe)); };
+
+  const head = h('div', { class:'ex-head' }, h('span', { class:'ex-n' }, String(i + 1)), h('h3', null, cap(e.name)));
+
+  // prescription tiles
+  const tile = (lbl, val, cls) => h('div', { class: 'tile' + (cls ? ' ' + cls : '') }, h('span', { class:'lbl' }, lbl), h('b', null, val));
+  let tiles;
+  if (isNum(x.serie) && x.reps) {
+    tiles = h('div', { class:'tiles' }, tile('Serie', x.serie), tile('Reps', dec(x.reps)), tile('Carico', x.carico ? fmtLoad(x.carico) : '—'));
+  } else {
+    const txt = fmtText([x.serie, x.reps].filter(Boolean).join(' · ')) || '—';
+    tiles = h('div', { class: 'tiles wide' + (x.carico ? ' with-load' : '') }, tile('Programma', txt, 'text'), x.carico ? tile('Carico', fmtLoad(x.carico)) : null);
+  }
+
+  // previous week, from the file or from what was marked here
+  const fromApp = L => L ? { repsEs: L.r || '', caricoEs: L.k || '', rpe: L.e || '' } : null;
+  const filled = y => y && (y.repsEs || y.caricoEs || y.rpe);
+  let prev = null;
+  if (wi > 0) {
+    const p = filled(e.w[wi-1]) ? e.w[wi-1] : fromApp(log[pk]);
+    if (filled(p)) {
+      const parts = [p.repsEs && (dec(p.repsEs) + ' reps'), p.caricoEs && (dec(p.caricoEs).replace(/\s*kg$/i,'') + ' kg'), p.rpe && ('RPE ' + dec(p.rpe))].filter(Boolean);
+      prev = h('p', { class:'prev' }, h('b', null, 'W' + model.weeks[wi-1] + ' '), parts.join(' · '));
+    }
+  }
+  const note = x.note ? h('p', { class:'note' }, h('span', null, x.note)) : null;
+
+  // inputs
+  const idp = 'in-' + k.replace(/:/g, '-');
+  const input = (f, lbl, ph, mode, cls) => {
+    const inp = h('input', { id: idp + '-' + f, type:'text', inputmode: mode, autocomplete:'off', autocorrect: f === 'n' ? 'on' : 'off', spellcheck: f === 'n' ? 'true' : 'false', enterkeyhint:'done',
+      placeholder: ph, value: cur[f] || '', disabled: isArchive() });
+    inp.addEventListener('input', () => { setLog(k, f, inp.value.trim()); refreshFilled(); });
+    inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') inp.blur(); });
+    return h('label', { class: 'field' + (cls ? ' ' + cls : '') }, h('span', { class:'lbl' }, lbl), inp);
+  };
+  const repsPh = x.repsEs ? dec(x.repsEs) : ('es. ' + (dec(x.reps) || '8'));
+  const kgPh = x.caricoEs ? dec(x.caricoEs) : 'kg';
+  const pair = h('div', { class:'pair' }, input('r', 'Reps fatte', repsPh, 'text'), input('k', 'Carico fatto', kgPh, 'decimal'));
+
+  // RPE 6–10: tap to pick, tap again to clear
+  const rpeVal = () => (log[k] || {}).e || '';
+  const rpeRow = h('div', { class:'rpe', role:'group', 'aria-label':'RPE' });
+  const paintRpe = () => rpeRow.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === (rpeVal() || x.rpe || '') && !!(rpeVal() || x.rpe))));
+  [6,7,8,9,10].forEach(v => rpeRow.append(h('button', { type:'button', 'data-v': String(v), 'aria-pressed':'false', disabled: isArchive(),
+    onclick: () => { setLog(k, 'e', rpeVal() === String(v) ? '' : String(v)); paintRpe(); refreshFilled(); } }, String(v))));
+  paintRpe();
+  const rpe = h('div', { class:'rpe-row' }, h('span', { class:'lbl' }, 'RPE'), rpeRow);
+
+  el.append(...[head, tiles, prev, note, pair, rpe].filter(Boolean));
+  rpe.style.marginTop = '-4px';
+  return el;
+}
+
+function when(ts){
+  const d = new Date(ts), now = new Date();
+  const t = d.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
+  if (d.toDateString() === now.toDateString()) return 'oggi alle ' + t;
+  return d.toLocaleDateString('it-IT', { day:'numeric', month:'short' }) + ' alle ' + t;
+}
+
+function banner(s){
+  const b = h('div', { class: 'banner' + (s.warn ? ' warn' : '') }, h('h2', null, s.title), h('p', null, s.text));
+  if (s.action) b.append(h('button', { type:'button', class:'cta', onclick: s.action.run }, s.action.label));
+  return b;
+}
+
+document.getElementById('refresh').addEventListener('click', () => sync({ want: activeKey() }));
+
+function toast(msg){
+  const t = h('div', { class:'toast', role:'status' }, msg);
+  document.body.append(t); setTimeout(() => t.remove(), 3200);
+}
+
+/* ---------- boot ---------- */
+loadModel();
+render();
+const stale = () => !syncInfo.at || Date.now() - syncInfo.at > SYNC_EVERY;
+if (apiReady && token && (!model || stale() || syncInfo.dirty.length)) sync({ want: activeKey() });
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') sendInBackground();
+  else if (stale()) sync();   // pending changes were already sent on the way out; the next regular sync confirms them
+});
+window.addEventListener('online', () => { if (syncInfo.dirty.length || !model) sync({ want: activeKey() }); });
+
+/* offline: keep the app shell cached (sw.js) */
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+})();
+</script>
+</body>
+</html>
