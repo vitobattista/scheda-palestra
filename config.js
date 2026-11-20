@@ -4,5 +4,5 @@
  * si inserisce nella pagina sul telefono.
  */
 window.SCHEDA_CONFIG = {
-  apiUrl: 'INCOLLA_QUI_URL_/exec'
+  apiUrl: 'https://script.google.com/macros/s/AKfycbwlt8oFOS_vsYzFPC6AST-pYni79e3EMpHKBfhNqefn2wLOYoI1NZD-NEgJI6JGgafkVQ/exec'
 };
