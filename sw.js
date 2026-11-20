@@ -4,12 +4,13 @@
  * del telefono (localStorage), non qui. Le chiamate al ponte non passano mai dalla cache.
  * Quando cambi i file, aumenta VERSION per far scaricare la nuova versione.
  */
-const VERSION = 'scheda-v2';
+const VERSION = 'scheda-v3';
 const SHELL = [
   './',
   'index.html',
   'config.js',
   'manifest.webmanifest',
+  'icons/favicon-32.png',
   'icons/apple-touch-icon.png',
   'icons/icon-192.png',
   'icons/icon-512.png'
